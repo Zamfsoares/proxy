@@ -1,0 +1,24 @@
+const ALLOWED = ['bcb.gov.br', 'fgv.br', 'gov.br'];
+ 
+export default {
+  async fetch(req) {
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'content-type' };
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { headers: { ...cors, 'Access-Control-Allow-Methods': 'GET' } });
+    }
+    let target;
+    try { target = new URL(new URL(req.url).searchParams.get('url')); }
+    catch { return new Response('Parâmetro url inválido', { status: 400, headers: cors }); }
+    const okHost = ALLOWED.some(d => target.hostname === d || target.hostname.endsWith('.' + d));
+    if (!/^https?:$/.test(target.protocol) || !okHost) {
+      return new Response('Domínio não permitido', { status: 403, headers: cors });
+    }
+    const r = await fetch(target, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Estudo+)', 'Accept': '*/*' },
+      cf: { cacheTtl: 900, cacheEverything: true }
+    });
+    const h = new Headers(cors);
+    h.set('content-type', r.headers.get('content-type') || 'text/plain; charset=utf-8');
+    return new Response(r.body, { status: r.status, headers: h });
+  }
+};
